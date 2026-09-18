@@ -4,6 +4,12 @@ import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
 
+/**
+ * Display preferences, stored by RuneLite so they survive a restart.
+ * <p>
+ * Nothing here changes what the account is allowed to pick up; the settings only decide how much
+ * of what the server has already refused is drawn or offered.
+ */
 @ConfigGroup(IronmanGroundItemsConfig.GROUP)
 public interface IronmanGroundItemsConfig extends Config
 {

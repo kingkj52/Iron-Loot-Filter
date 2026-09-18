@@ -13,6 +13,7 @@ repositories {
 }
 
 def runeLiteVersion = 'latest.release'
+def pluginMainClass = 'com.ironmangrounditems.IronmanGroundItemsPluginTest'
 
 dependencies {
 	compileOnly group: 'net.runelite', name: 'client', version: runeLiteVersion
@@ -23,12 +24,20 @@ dependencies {
 }
 
 group = 'com.ironmangrounditems'
-version = '1.0'
+version = '0.1'
 
 tasks.withType(JavaCompile).configureEach {
 	options.encoding = 'UTF-8'
 	options.release.set(11)
 	options.compilerArgs << '-Xlint:deprecation'
+}
+
+// The upstream notices travel with the artefact, not just the repository.
+jar {
+	from(rootDir) {
+		include 'LICENSE', 'NOTICE'
+		into 'META-INF'
+	}
 }
 
 test {
@@ -40,7 +49,7 @@ test {
 // Dev client with this plugin loaded. Needs developer mode.
 tasks.register('run', JavaExec) {
 	classpath = sourceSets.test.runtimeClasspath
-	mainClass = 'com.ironmangrounditems.IronmanGroundItemsPluginTest'
+	mainClass = pluginMainClass
 
 	jvmArgs '-ea'
 	args '--developer-mode', '--debug'

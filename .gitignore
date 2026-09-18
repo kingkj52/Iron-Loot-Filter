@@ -1,6 +1,12 @@
+# Gradle
 build/
 .gradle/
 
+# Working notes kept locally.
+# Attribution that the licences require lives in NOTICE.
+docs/
+
+# IDE
 .idea/
 *.iml
 *.ipr
@@ -9,6 +15,10 @@ build/
 .project
 .settings/
 out/
+nbactions.xml
+nb-configuration.xml
+nbproject/
 
+# OS
 .DS_Store
 Thumbs.db

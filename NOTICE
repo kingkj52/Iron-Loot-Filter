@@ -1,0 +1,37 @@
+Ironman Ground Items
+Copyright (c) 2026, KingKj52
+
+The plugin's own source is under the BSD 2-Clause License in LICENSE.
+
+Pickup rules
+------------
+
+The plugin reads the ownership flag the server already sends with every ground
+item, exposed as net.runelite.api.TileItem, and the ironman varbit exposed as
+net.runelite.api.gameval.VarbitID. Nothing about ironman restrictions is
+reimplemented or predicted here.
+
+RuneLite's own Ground Items plugin applies the same test to its overlay text
+under its OwnershipFilterMode.TAKEABLE setting:
+
+  Ground Items, Copyright (c) 2017, Aria <aria@ariamoded.net>
+  and the RuneLite contributors, BSD 2-Clause
+
+That was read as confirmation the flag means what it appears to mean, and the
+group ownership case was settled from it. No code from it is reproduced; this
+plugin hides models and menu entries, which it does not.
+
+Restrictions were checked against the OSRS Wiki on 2026-09-17:
+
+  https://oldschool.runescape.wiki/w/Ironman_Mode
+
+No wiki text or images are redistributed here. A published rule can go stale,
+which is the reason the ownership flag is read rather than summarised.
+
+Scope
+-----
+
+This plugin has not been reviewed by Jagex or by the RuneLite Plugin Hub. The
+existence of comparable Hub plugins that hide ground item models is evidence
+that the functionality exists, not approval of this implementation. It removes
+options the server would have refused; it performs no action on their behalf.
