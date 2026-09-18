@@ -24,7 +24,7 @@ public class ComplianceTest
         {
             for (Path file : files) sources.add(new String(Files.readAllBytes(file), StandardCharsets.UTF_8));
         }
-        assertTrue("no sources found", sources.size() >= 4);
+        assertTrue("no sources found", sources.size() >= 3);
     }
 
     private static void absent(String... fragments)

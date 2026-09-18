@@ -1,7 +1,7 @@
 package com.ironmangrounditems;
 
 import com.google.inject.Provides;
-import java.util.*;
+import java.util.List;
 import javax.inject.Inject;
 import net.runelite.api.*;
 import net.runelite.api.events.*;
@@ -18,25 +18,26 @@ import net.runelite.client.plugins.PluginDescriptor;
 @PluginDescriptor(name = "Ironman Ground Items (Local)", description = "Hides ground items an ironman or group ironman cannot pick up", tags = {"ironman", "gim", "ground", "items", "loot", "local"}, enabledByDefault = false)
 public class IronmanGroundItemsPlugin extends Plugin
 {
+    private static final int ABSENT = 0, TAKEABLE = 1, BLOCKED = 2;
+
     @Inject private Client client;
     @Inject private ClientThread clientThread;
     @Inject private IronmanGroundItemsConfig config;
     @Inject private RenderCallbackManager renderCallbacks;
-    /** Layers to skip, keyed on identity: a layer the client replaces drops out and the new one draws. */
-    private final Set<ItemLayer> hidden = Collections.newSetFromMap(new IdentityHashMap<>());
-    /** Which layer was hidden for each tile, so replacing one leaves nothing behind. */
-    private final Map<Tile, ItemLayer> marked = new IdentityHashMap<>();
-    private boolean restricted;
+    /** Read from the render path, replaced wholesale on the client thread. */
+    private volatile Rules rules = Rules.INACTIVE;
+    private volatile boolean stale = true;
 
     /**
-     * Runs for every entity the client adds to the scene, so it stays a type check and a set
-     * lookup. Skipping an entity takes its clickbox with it, which is why the menu filtering below
-     * only has to cover tiles that are still drawn.
+     * An ItemLayer is a TileObject rather than a Renderable, so it arrives through drawObject and
+     * never through addEntity. It carries the items it is about to draw, so the decision is made
+     * here from live state: a setting change or a pile changing hands shows up on the next frame
+     * with nothing to recalculate or invalidate.
      */
     private final RenderCallback renderCallback = new RenderCallback()
     {
-        @Override public boolean addEntity(Renderable renderable, boolean ui)
-        { return !(renderable instanceof ItemLayer) || !hidden.contains(renderable); }
+        @Override public boolean drawObject(Scene scene, TileObject object)
+        { return !(object instanceof ItemLayer) || drawLayer((ItemLayer) object); }
     };
 
     @Provides IronmanGroundItemsConfig provideConfig(ConfigManager configManager)
@@ -44,98 +45,79 @@ public class IronmanGroundItemsPlugin extends Plugin
 
     @Override protected void startUp()
     {
+        stale = true;
         renderCallbacks.register(renderCallback);
-        clientThread.invoke(this::reload);
+        clientThread.invoke(this::apply);
     }
     @Override protected void shutDown()
     {
         renderCallbacks.unregister(renderCallback);
-        clientThread.invoke(() -> { hidden.clear(); marked.clear(); restricted = false; });
+        rules = Rules.INACTIVE;
     }
 
-    @Subscribe public void onGameStateChanged(GameStateChanged event)
+    // Settings arrive on the Swing thread and a slider or a spammed checkbox can post several in a
+    // row, so the change is only flagged here and picked up once on the next client tick.
+    @Subscribe public void onConfigChanged(ConfigChanged event)
     {
-        GameState state = event.getGameState();
-        if (state == GameState.LOGGED_IN) reload();
-        // The scene is about to be rebuilt and every Tile with it.
-        else if (state == GameState.LOADING || state == GameState.HOPPING || state == GameState.LOGIN_SCREEN)
-        { hidden.clear(); marked.clear(); }
+        if (IronmanGroundItemsConfig.GROUP.equals(event.getGroup())) stale = true;
     }
     @Subscribe public void onVarbitChanged(VarbitChanged event)
     {
-        if (event.getVarbitId() == VarbitID.IRONMAN) reload();
+        if (event.getVarbitId() == VarbitID.IRONMAN) stale = true;
     }
-    @Subscribe public void onConfigChanged(ConfigChanged event)
+    @Subscribe public void onGameStateChanged(GameStateChanged event)
     {
-        if (IronmanGroundItemsConfig.GROUP.equals(event.getGroup())) reload();
+        stale = true;
     }
-    @Subscribe public void onItemSpawned(ItemSpawned event)
+    @Subscribe public void onClientTick(ClientTick event)
     {
-        refresh(event.getTile(), null);
-    }
-    @Subscribe public void onItemDespawned(ItemDespawned event)
-    {
-        // Whether the tile still lists the item at this point is not worth relying on.
-        refresh(event.getTile(), event.getItem());
+        if (stale) apply();
     }
     @Subscribe public void onMenuEntryAdded(MenuEntryAdded event)
     {
-        if (!restricted || !config.hideMenuEntries()) return;
+        Rules current = rules;
+        if (!current.active || !current.hideMenuEntries) return;
         MenuEntry entry = event.getMenuEntry();
         MenuAction type = entry.getType();
         if (!isGroundItemAction(type)) return;
-        if (type == MenuAction.EXAMINE_ITEM_GROUND && !config.hideExamine()) return;
-        if (isBlocked(entry.getParam0(), entry.getParam1(), entry.getIdentifier())) client.getMenu().removeMenuEntry(entry);
+        if (type == MenuAction.EXAMINE_ITEM_GROUND && !current.hideExamine) return;
+        if (isBlocked(entry.getParam0(), entry.getParam1(), entry.getIdentifier(), current)) client.getMenu().removeMenuEntry(entry);
     }
 
-    private void reload()
+    /** Client thread only. */
+    private void apply()
     {
+        stale = false;
         int accountType = client.getGameState() == GameState.LOGGED_IN ? client.getVarbitValue(VarbitID.IRONMAN) : Takeable.NORMAL_ACCOUNT;
-        restricted = Takeable.isRestricted(accountType) || config.testOnNormalAccount();
-        hidden.clear(); marked.clear();
-        if (!restricted || !config.hideModels()) return;
-        WorldView view = client.getTopLevelWorldView(); if (view == null) return;
-        Scene scene = view.getScene(); if (scene == null) return;
-        for (Tile[][] plane : scene.getTiles())
-            for (Tile[] column : plane)
-                for (Tile tile : column)
-                    if (tile != null && tile.getItemLayer() != null) refresh(tile, null);
-    }
-
-    private void refresh(Tile tile, TileItem leaving)
-    {
-        if (tile == null) return;
-        ItemLayer previous = marked.remove(tile);
-        if (previous != null) hidden.remove(previous);
-        ItemLayer layer = tile.getItemLayer();
-        if (layer == null || !shouldHide(tile, leaving)) return;
-        hidden.add(layer); marked.put(tile, layer);
+        boolean active = Takeable.isRestricted(accountType) || config.testOnNormalAccount();
+        rules = active ? new Rules(true, config.hideModels(), config.hideMenuEntries(), config.hideExamine(), config.groupDropsTakeable()) : Rules.INACTIVE;
     }
 
     /**
-     * The client draws a tile's items as one object, so a mixed tile cannot be half hidden. Leaving
-     * it drawn is the safe answer: hiding it would take the player's own drop with it.
+     * A pile draws at most three items, and those are the only ones on screen to hide. A tile
+     * holding anything still takeable is left alone; once that item goes, the next frame hides
+     * what remains.
      */
-    private boolean shouldHide(Tile tile, TileItem leaving)
+    private boolean drawLayer(ItemLayer layer)
     {
-        if (!restricted || !config.hideModels()) return false;
-        List<TileItem> items = tile.getGroundItems(); if (items == null) return false;
-        boolean keepMixed = config.mixedTiles() == MixedTileMode.SHOW, groupTakeable = config.groupDropsTakeable(), blocked = false;
-        for (int i = 0; i < items.size(); i++)
-        {
-            TileItem item = items.get(i);
-            if (item == leaving) continue;
-            if (Takeable.canTake(true, item.getOwnership(), groupTakeable)) { if (keepMixed) return false; }
-            else blocked = true;
-        }
-        return blocked;
+        Rules current = rules;
+        if (!current.active || !current.hideModels) return true;
+        int bottom = verdict(layer.getBottom(), current), middle = verdict(layer.getMiddle(), current), top = verdict(layer.getTop(), current);
+        if (bottom == TAKEABLE || middle == TAKEABLE || top == TAKEABLE) return true;
+        return bottom != BLOCKED && middle != BLOCKED && top != BLOCKED;
+    }
+
+    private static int verdict(Renderable renderable, Rules rules)
+    {
+        if (!(renderable instanceof TileItem)) return ABSENT;
+        return Takeable.canTake(true, ((TileItem) renderable).getOwnership(), rules.groupDropsTakeable) ? TAKEABLE : BLOCKED;
     }
 
     /**
      * A menu entry carries the item ID but not the stack, so a tile holding two stacks of one ID
      * under different owners cannot be told apart. The entry is kept in that case.
      */
-    private boolean isBlocked(int sceneX, int sceneY, int itemId)
+    private boolean isBlocked(int sceneX, int sceneY, int itemId, Rules current)
     {
         WorldView view = client.getTopLevelWorldView(); if (view == null) return false;
         Scene scene = view.getScene(); if (scene == null) return false;
@@ -144,12 +126,12 @@ public class IronmanGroundItemsPlugin extends Plugin
         if (plane < 0 || plane >= tiles.length || sceneX < 0 || sceneX >= tiles[plane].length || sceneY < 0 || sceneY >= tiles[plane][sceneX].length) return false;
         Tile tile = tiles[plane][sceneX][sceneY]; if (tile == null) return false;
         List<TileItem> items = tile.getGroundItems(); if (items == null) return false;
-        boolean groupTakeable = config.groupDropsTakeable(), blocked = false;
+        boolean blocked = false;
         for (int i = 0; i < items.size(); i++)
         {
             TileItem item = items.get(i);
             if (item.getId() != itemId) continue;
-            if (Takeable.canTake(true, item.getOwnership(), groupTakeable)) return false;
+            if (Takeable.canTake(true, item.getOwnership(), current.groupDropsTakeable)) return false;
             blocked = true;
         }
         return blocked;
@@ -170,5 +152,14 @@ public class IronmanGroundItemsPlugin extends Plugin
             default:
                 return false;
         }
+    }
+
+    /** One snapshot so the render path reads a consistent set rather than five separate fields. */
+    private static final class Rules
+    {
+        static final Rules INACTIVE = new Rules(false, false, false, false, false);
+        final boolean active, hideModels, hideMenuEntries, hideExamine, groupDropsTakeable;
+        Rules(boolean active, boolean hideModels, boolean hideMenuEntries, boolean hideExamine, boolean groupDropsTakeable)
+        { this.active = active; this.hideModels = hideModels; this.hideMenuEntries = hideMenuEntries; this.hideExamine = hideExamine; this.groupDropsTakeable = groupDropsTakeable; }
     }
 }

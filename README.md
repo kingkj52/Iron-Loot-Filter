@@ -4,8 +4,9 @@ Ground items your account is not allowed to pick up stop being drawn, and their 
 away, so a left click on the tile falls through to whatever is actually usable and a right click
 never lists them.
 
-It reads the ownership flag the server already sends with every item. **On a normal account it does
-nothing at all.**
+It reads the ownership flag the server already sends with every item, at the moment each pile is
+drawn, so a setting change or a pile changing hands takes effect on the next frame. **On a normal
+account it does nothing at all.**
 
 ## How it decides
 
@@ -43,8 +44,9 @@ the client hooks behave as expected in game.
 ## Known limits
 
 - The client draws all of a tile's items as **one object**, so a tile holding your loot and a
-  stranger's cannot be half hidden. By default those tiles stay drawn and only their menu entries
-  are filtered, which never hides your own drop. **Tiles holding both** switches that.
+  stranger's cannot be half hidden. Those tiles stay drawn and only their menu entries are
+  filtered, which never hides your own drop. The moment your item leaves the pile the rest of it
+  disappears, on the next frame, so the case resolves itself.
 - A menu entry carries the item ID but not the stack, so two stacks of one ID on a tile under
   different owners cannot be told apart. The entry is kept in that case.
 - Ownership is the only reason an item is hidden. Something you cannot take for another reason — a
@@ -56,11 +58,13 @@ the client hooks behave as expected in game.
 - The render hook operates on whole item layers, which is the only granularity RuneLite exposes.
   Rebuilding the pile without the blocked items would mean drawing models by hand above the scene,
   which costs more per frame than the problem is worth.
+- A layer reports the three items it is about to draw, which is all the client draws of a pile. A
+  fourth stack under those three is not on screen to hide.
 
 ## Settings
 
-- **Hide the item models.** Stops the pile being drawn. On by default.
-- **Tiles holding both.** Leave a mixed tile alone, or hide the whole pile. Leave alone by default.
+- **Hide the item models.** Stops the pile being drawn. On by default. A pile holding one of your
+  own items stays visible until that item is gone.
 - **Remove the take options.** Drops `Take` entries for blocked items. On by default.
 - **Remove examine too.** Also drops `Examine` for them. On by default.
 - **Group drops are takeable.** Treats group-owned items as yours. Turn it off if you are not a
@@ -75,7 +79,8 @@ the client hooks behave as expected in game.
 2. On the ironman, stand in a busy spot and confirm other players' piles stop appearing, that left
    clicking the tile walks there instead of failing a pickup, and that right clicking lists nothing
    for them.
-3. Check a tile holding both: yours must still be takeable.
+3. Check a tile holding both: yours must still be takeable, and the pile must vanish once you take
+   it.
 4. Check a fire burning out, and a raid, if you can — both should stay visible.
 5. Disable the plugin and confirm everything comes back on the next frame.
 
