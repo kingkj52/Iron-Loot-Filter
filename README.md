@@ -57,7 +57,7 @@ actually take.
 Ownership is the only reason anything is hidden. Loot you cannot pick up for some other reason, such
 as a quest requirement or a full inventory, is still shown.
 
-## Nothing is automated
+## Security Guarantee
 
 The plugin does not click, walk, pick anything up, or create or invoke a menu option. It removes
 options the server would have refused and hides models you were never able to use. Every action is
