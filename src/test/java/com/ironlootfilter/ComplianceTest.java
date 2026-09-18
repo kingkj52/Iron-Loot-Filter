@@ -1,4 +1,4 @@
-package com.ironmangrounditems;
+package com.ironlootfilter;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -20,7 +20,7 @@ public class ComplianceTest
     @BeforeClass public static void readSource() throws IOException
     {
         Path root = Paths.get("src", "main", "java");
-        try (DirectoryStream<Path> files = Files.newDirectoryStream(root.resolve("com/ironmangrounditems"), "*.java"))
+        try (DirectoryStream<Path> files = Files.newDirectoryStream(root.resolve("com/ironlootfilter"), "*.java"))
         {
             for (Path file : files) sources.add(new String(Files.readAllBytes(file), StandardCharsets.UTF_8));
         }

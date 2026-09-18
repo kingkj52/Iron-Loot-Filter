@@ -1,13 +1,13 @@
-package com.ironmangrounditems;
+package com.ironlootfilter;
 
 import net.runelite.client.RuneLite;
 import net.runelite.client.externalplugins.ExternalPluginManager;
 
-public class IronmanGroundItemsPluginTest
+public class IronLootFilterPluginTest
 {
 	public static void main(String[] args) throws Exception
 	{
-		ExternalPluginManager.loadBuiltin(IronmanGroundItemsPlugin.class);
+		ExternalPluginManager.loadBuiltin(IronLootFilterPlugin.class);
 		RuneLite.main(args);
 	}
 }

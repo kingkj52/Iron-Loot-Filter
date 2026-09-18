@@ -1,4 +1,4 @@
-package com.ironmangrounditems;
+package com.ironlootfilter;
 
 import com.google.inject.Provides;
 import java.util.List;
@@ -15,14 +15,14 @@ import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 
-@PluginDescriptor(name = "Ironman Ground Items (Local)", description = "Hides ground items an ironman or group ironman cannot pick up", tags = {"ironman", "gim", "ground", "items", "loot", "local"}, enabledByDefault = false)
-public class IronmanGroundItemsPlugin extends Plugin
+@PluginDescriptor(name = "Iron Loot Filter", description = "Hides ground loot your account cannot pick up. Covers every ironman type; group ironmen keep seeing their group's drops", tags = {"ironman", "iron", "uim", "hcim", "gim", "group", "ground", "items", "loot", "hide", "clutter"})
+public class IronLootFilterPlugin extends Plugin
 {
     private static final int ABSENT = 0, TAKEABLE = 1, BLOCKED = 2;
 
     @Inject private Client client;
     @Inject private ClientThread clientThread;
-    @Inject private IronmanGroundItemsConfig config;
+    @Inject private IronLootFilterConfig config;
     @Inject private RenderCallbackManager renderCallbacks;
     /** Read from the render path, replaced wholesale on the client thread. */
     private volatile Rules rules = Rules.INACTIVE;
@@ -40,8 +40,8 @@ public class IronmanGroundItemsPlugin extends Plugin
         { return !(object instanceof ItemLayer) || drawLayer((ItemLayer) object); }
     };
 
-    @Provides IronmanGroundItemsConfig provideConfig(ConfigManager configManager)
-    { return configManager.getConfig(IronmanGroundItemsConfig.class); }
+    @Provides IronLootFilterConfig provideConfig(ConfigManager configManager)
+    { return configManager.getConfig(IronLootFilterConfig.class); }
 
     @Override protected void startUp()
     {
@@ -59,7 +59,7 @@ public class IronmanGroundItemsPlugin extends Plugin
     // row, so the change is only flagged here and picked up once on the next client tick.
     @Subscribe public void onConfigChanged(ConfigChanged event)
     {
-        if (IronmanGroundItemsConfig.GROUP.equals(event.getGroup())) stale = true;
+        if (IronLootFilterConfig.GROUP.equals(event.getGroup())) stale = true;
     }
     @Subscribe public void onVarbitChanged(VarbitChanged event)
     {

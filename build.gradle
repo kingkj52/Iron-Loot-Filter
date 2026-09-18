@@ -13,7 +13,7 @@ repositories {
 }
 
 def runeLiteVersion = 'latest.release'
-def pluginMainClass = 'com.ironmangrounditems.IronmanGroundItemsPluginTest'
+def pluginMainClass = 'com.ironlootfilter.IronLootFilterPluginTest'
 
 dependencies {
 	compileOnly group: 'net.runelite', name: 'client', version: runeLiteVersion
@@ -23,8 +23,8 @@ dependencies {
 	testImplementation group: 'net.runelite', name: 'jshell', version: runeLiteVersion
 }
 
-group = 'com.ironmangrounditems'
-version = '0.1'
+group = 'com.ironlootfilter'
+version = '1.0'
 
 tasks.withType(JavaCompile).configureEach {
 	options.encoding = 'UTF-8'

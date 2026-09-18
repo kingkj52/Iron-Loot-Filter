@@ -1,4 +1,4 @@
-package com.ironmangrounditems;
+package com.ironlootfilter;
 
 import net.runelite.api.TileItem;
 

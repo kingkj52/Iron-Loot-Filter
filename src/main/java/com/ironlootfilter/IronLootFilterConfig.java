@@ -1,4 +1,4 @@
-package com.ironmangrounditems;
+package com.ironlootfilter;
 
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
@@ -10,10 +10,10 @@ import net.runelite.client.config.ConfigItem;
  * Nothing here changes what the account is allowed to pick up; the settings only decide how much
  * of what the server has already refused is drawn or offered.
  */
-@ConfigGroup(IronmanGroundItemsConfig.GROUP)
-public interface IronmanGroundItemsConfig extends Config
+@ConfigGroup(IronLootFilterConfig.GROUP)
+public interface IronLootFilterConfig extends Config
 {
-	String GROUP = "ironmangrounditems";
+	String GROUP = "ironlootfilter";
 
 	@ConfigItem(
 		keyName = "hideModels",

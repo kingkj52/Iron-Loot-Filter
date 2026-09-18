@@ -1,4 +1,4 @@
-package com.ironmangrounditems;
+package com.ironlootfilter;
 
 import static net.runelite.api.TileItem.OWNERSHIP_GROUP;
 import static net.runelite.api.TileItem.OWNERSHIP_NONE;
