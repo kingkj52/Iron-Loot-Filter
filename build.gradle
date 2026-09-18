@@ -1,0 +1,53 @@
+plugins {
+	id 'java'
+}
+
+repositories {
+	maven {
+		url = 'https://repo.runelite.net'
+		content {
+			includeGroupByRegex("net\\.runelite.*")
+		}
+	}
+	mavenCentral()
+}
+
+def runeLiteVersion = 'latest.release'
+
+dependencies {
+	compileOnly group: 'net.runelite', name: 'client', version: runeLiteVersion
+
+	testImplementation 'junit:junit:4.12'
+	testImplementation group: 'net.runelite', name: 'client', version: runeLiteVersion
+	testImplementation group: 'net.runelite', name: 'jshell', version: runeLiteVersion
+}
+
+group = 'com.ironmangrounditems'
+version = '1.0'
+
+tasks.withType(JavaCompile).configureEach {
+	options.encoding = 'UTF-8'
+	options.release.set(11)
+	options.compilerArgs << '-Xlint:deprecation'
+}
+
+test {
+	testLogging {
+		events 'passed', 'failed', 'skipped'
+	}
+}
+
+// Dev client with this plugin loaded. Needs developer mode.
+tasks.register('run', JavaExec) {
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.ironmangrounditems.IronmanGroundItemsPluginTest'
+
+	jvmArgs '-ea'
+	args '--developer-mode', '--debug'
+}
+
+tasks.register('deploy', Copy) {
+	dependsOn tasks.jar
+	from tasks.jar
+	into "${System.getProperty('user.home')}/.runelite/sideloaded-plugins"
+}
